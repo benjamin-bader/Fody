@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Permissions;
+using System.Reflection;
 
 public partial class InnerWeaver : MarshalByRefObject, IInnerWeaver
 {
@@ -45,6 +46,10 @@ public partial class InnerWeaver : MarshalByRefObject, IInnerWeaver
                 SetProperties(weaverConfig, weaverInstance, delegateHolder);
 
                 Logger.SetCurrentWeaverName(weaverConfig.AssemblyName);
+
+                var assemblyResolveHandler = CreateEventHandler(weaverConfig.AssemblyPath);
+                AppDomain.CurrentDomain.AssemblyResolve += assemblyResolveHandler;
+
                 try
                 {
                     Logger.LogInfo("\tExecuting Weaver ");
@@ -60,6 +65,7 @@ public partial class InnerWeaver : MarshalByRefObject, IInnerWeaver
                 finally
                 {
                     Logger.ClearWeaverName();
+                    AppDomain.CurrentDomain.AssemblyResolve -= assemblyResolveHandler;
                 }
 
             }
@@ -76,7 +82,6 @@ public partial class InnerWeaver : MarshalByRefObject, IInnerWeaver
             Logger.LogError(exception.ToFriendlyString());
         }
     }
-
 
     [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
     public override object InitializeLifetimeService()
